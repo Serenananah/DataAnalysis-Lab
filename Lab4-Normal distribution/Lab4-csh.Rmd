@@ -1,0 +1,163 @@
+---
+title: "Lab 4 - Normal Distribution"
+author: "202330420212 - Sihan Chen & 202364820921 - Yue Zhang"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: false
+    number_sections: true
+    fig_caption: true
+    theme: readable
+  pdf_document:
+    number_sections: true
+    fig_caption: true
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.width = 6, fig.height = 4)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+# Introduction
+
+The normal distribution, or Gaussian distribution, is a fundamental concept in probability and statistics, modeling a wide range of natural phenomena. In this lab, we aim to understand the shape and properties of the normal distribution through simulation and visualization using R.
+
+**Objectives of this lab include:**
+
+- Simulate and visualize normal distributions with varying parameters  
+
+- Understand how mean and standard deviation affect the curve shape  
+
+- Examine empirical rule coverage using shaded visualizations  
+
+- Use QQ plots to assess normality  
+
+- Demonstrate the Central Limit Theorem via uniform sample means  
+
+- Apply theoretical and empirical normal probability calculations  
+
+- Evaluate normality for real-world measurements  
+
+# The Data
+
+This section introduces the dataset used in this lab, which contains body measurements from 507 individuals (247 men and 260 women). We begin by exploring the height distributions of men and women, laying the foundation for subsequent analysis of normality.
+
+## Exercise 1 - Comparing Heights of Men and Women
+
+```{r load-data}
+load(url("http://www.openintro.org/stat/data/bdims.RData"))
+head(bdims)
+mdims <- subset(bdims, sex == 1)
+fdims <- subset(bdims, sex == 0)
+```
+
+```{r ex1}
+ggplot() +
+  geom_histogram(data = mdims, aes(x = hgt, y = ..density..), fill = "blue", alpha = 0.5, bins = 30) +
+  geom_histogram(data = fdims, aes(x = hgt, y = ..density..), fill = "pink", alpha = 0.5, bins = 30) +
+  labs(title = "Height Distribution of Men and Women", x = "Height (cm)", y = "Density") +
+  theme_minimal()
+```
+
+**Observation:** Men's height distribution is shifted rightward, has a higher mean and wider spread than women's. Women's height distribution is more concentrated around its mean.
+
+# The Normal Distribution
+Here, we begin exploring the shape of normal distributions through simulations and theoretical curves. We analyze how parameters like mean and standard deviation affect the normal curve, and assess whether real-world measurements (e.g., female heights) visually match this theoretical distribution.
+
+## Exercise 2 - Do Female Heights Follow a Normal Distribution?
+
+```{r ex2}
+ggplot(fdims, aes(x = hgt)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "gray", color = "black") +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(fdims$hgt), sd = sd(fdims$hgt)),
+                col = "blue", size = 1) +
+  labs(title = "Histogram of Female Heights with Normal Curve",
+       x = "Female Height (cm)",
+       y = "Density") +
+  theme_minimal()
+```
+
+**Observation:** The histogram of female heights appears approximately normal, especially near the center, though slight tail deviations are visible.
+
+# Evaluating the Normal Distribution
+To further investigate normality, we compare real and simulated data using Q-Q plots. This section focuses on visual diagnostics that help assess how well the data follow a normal distribution, including female height and male weight.
+
+## Exercise 3 - QQ Plot of Simulated Normal Data
+
+```{r ex3}
+sim_norm <- rnorm(n = length(fdims$hgt), mean = mean(fdims$hgt), sd = sd(fdims$hgt))
+qqnorm(sim_norm)
+qqline(sim_norm, col = "red")
+```
+
+**Observation:** The simulated normal data aligns closely with the QQ line, as expected.
+
+## Exercise 4 - QQ Plot of Actual Female Heights
+
+```{r ex4}
+qqnorm(fdims$hgt)
+qqline(fdims$hgt, col = "red")
+```
+
+**Observation:** The QQ plot of actual female heights shows good alignment with the line, though slight deviation exists at the tails, indicating near-normality.
+
+## Exercise 5 - QQ Plot of Male Weights
+
+```{r ex5}
+qqnorm(mdims$wgt)
+qqline(mdims$wgt, col = "red")
+```
+
+**Observation:** The QQ plot for male weights shows more deviation at the upper tail compared to female heights, suggesting less normality.
+
+# Normal Probabilities
+This section introduces the use of the normal distribution to calculate theoretical probabilities using pnorm(). We compare theoretical results to empirical ones derived from the data to understand how closely the normal model fits real measurements.
+
+## Exercise 6 - Female Weight > 72 kg
+
+```{r ex6}
+fmean <- mean(fdims$wgt)
+sdweight <- sd(fdims$wgt)
+prob_theory <- 1 - pnorm(72, mean = fmean, sd = sdweight)
+prob_empirical <- mean(fdims$wgt > 72)
+```
+
+**Observation:** The theoretical and empirical probabilities are fairly close, supporting the validity of the normal assumption for weight.
+
+## Exercise 7 - Which is More Normal: Height or Weight?
+
+**Answer:** Based on Q-Q plots and probability estimates, **height** demonstrates stronger agreement between theoretical and empirical results, indicating it is more normally distributed.
+
+# Additional Exercises
+The final section includes advanced applications of normality assessment. Students match histograms to Q-Q plots, identify unusual patterns (e.g., stepwise Q-Q plot shapes), and determine skewness of a specific variable, applying all skills learned throughout the lab.
+
+## Exercise 8 - Match Histograms and QQ Plots
+
+**Answers:**  
+- a. `bii.di` → Plot 2  
+- b. `elb.di` → Plot 4  
+- c. `age` → Plot 3  
+- d. `che.de` → Plot 1
+
+## Exercise 9 - Stepwise Pattern Explanation
+
+**Answer:** Plot 3 has a stepwise pattern because the variable (age) is discrete or rounded, which results in repeated values that appear as plateaus in the QQ plot.
+
+## Exercise 10 - Normality of `kne.di`
+
+```{r ex10}
+qqnorm(fdims$kne.di)
+qqline(fdims$kne.di, col = "red")
+
+ggplot(fdims, aes(x = kne.di)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "black") +
+  labs(title = "Histogram of Female Knee Diameter", x = "kne.di", y = "Frequency") +
+  theme_minimal()
+```
+
+**Observation:** The QQ plot and histogram show left skewness in `kne.di`, with longer left tails and deviation from the normal line at lower quantiles.

@@ -1,0 +1,150 @@
+---
+title: "Lab 1 - Data Analysis and Modeling"
+author: "Yue Zhang & SiHan Chen"
+date: "3/25/2025"
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    number_sections: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This lab introduces the basics of R and RStudio.
+We will work with two built-in datasets, pressure and women, to practice data exploration, visualization, and analysis. We will complete 7 exercises and generate reproducible results in R Markdown format.
+
+# Exercise 1
+Task: Complete the R language basics 1_3 from Cookbook for R _ Basics
+Status: [OK] Done
+
+
+# Exercise 2 - Exploring the pressure dataset
+```{r load-pressure}
+data(pressure)
+head(pressure)
+```
+## Select specific data:
+
+Fourth row, second column:
+```{r select-point}
+pressure[4, 2]
+```
+Select the entire second column:
+
+```{r select-column}
+pressure[, 2]
+```
+
+
+# Exercise 3 - Temperature vs. Pressure Plot
+```{r pressure-plot}
+plot(
+  x = pressure$temperature,
+  y = pressure$pressure,
+  type = "b",
+  col = "darkred",
+  pch = 19,
+  lwd = 2,
+  xlab = "Temperature (°C)",
+  ylab = "Pressure (mmHg)",
+  main = "Temperature vs Pressure"
+)
+grid()
+```
+From the plot, we observe that as temperature increases, pressure also increases rapidly, showing a non-linear relationship.
+
+
+# Exercise 4 - Calculating Volume using PV = nRT
+We use the ideal gas law:
+$$PV = nRT$$
+Where:
+	•	( P ): pressure in Pa
+	•	( T ): temperature in Kelvin
+	•	( V ): volume
+	•	( R = 8.31 ), ( n = 1 )
+```{r calc-volume}
+R <- 8.31
+n <- 1
+T <- pressure$temperature + 273.15
+P <- pressure$pressure * 133.322  # mmHg to Pascal
+
+V <- (n * R * T) / P
+```
+
+## Plot: Temperature vs Volume
+```{r plot-volume}
+plot(
+  x = pressure$temperature, y = V,
+  type = "o", col = "steelblue", pch = 17, lwd = 2,
+  xlab = "Temperature (°C)", ylab = "Volume (L)",
+  main = "Estimated Volume vs Temperature"
+)
+grid()
+```
+This plot demonstrates the volume increases with temperature, as expected from gas law behavior.
+
+
+# Exercise 5 - Exploring the women dataset
+```{r load-women}
+data(women)
+head(women)
+dim(women)
+names(women)
+```
+The dataset contains 15 rows and 2 columns: height (inches), weight (lbs)
+
+
+# Exercise 6 - Plot Height² vs Weight
+```{r high2-plot}
+height_sq <- women$height^2
+
+plot(
+  x = women$weight, y = height_sq,
+  type = "p", pch = 19, col = "forestgreen",
+  xlab = "Weight (lbs)", ylab = "Height² (in²)",
+  main = "Height Squared vs Weight"
+)
+abline(lm(height_sq ~ women$weight), col = "darkgray", lwd = 2)
+grid()
+```
+We see a clear upward trend: as weight increases, squared height increases linearly.
+
+
+# Exercise 7 - BMI Calculation
+Formula:
+$$ \text{BMI} = \frac{\text{weight (kg)}}{[\text{height (m)}]^2} $$
+```{r bmi-calc}
+# Convert units
+weight_kg <- women$weight * 0.453592
+height_m <- women$height * 0.0254
+
+BMI <- weight_kg / (height_m^2)
+BMI
+```
+
+## Plot BMI by individual
+```{r plot-bmi}
+barplot(
+  BMI,
+  col = "tomato",
+  names.arg = 1:15,
+  main = "BMI of Each Woman",
+  xlab = "Woman (Index)", ylab = "BMI"
+)
+abline(h = 25, col = "blue", lty = 2)
+text(x = which.max(BMI), y = max(BMI) + 1, labels = "Highest", col = "darkred")
+```
+
+```{r max-bmi}
+max_bmi_index <- which.max(BMI)
+max_bmi_value <- max(BMI)
+list("Index" = max_bmi_index, "Max BMI" = max_bmi_value)
+```
+Woman number r max_bmi_index has the highest BMI: r round(max_bmi_value, 2).
+
+Reminder: Healthy BMI range is 18.5/text{-}24.9. This person may exceed that range.

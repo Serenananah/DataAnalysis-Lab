@@ -1,0 +1,140 @@
+---
+title: "Lab 3 - Probability & Simulations"
+author: "202330420212-Sihan Chen & 202364820921-Yue Zhang"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: readable
+  pdf_document:
+    latex_engine: xelatex
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+packages <- c("babynames", "dplyr", "ggplot2")
+installed <- rownames(installed.packages())
+for (pkg in packages) {
+  if (!pkg %in% installed) install.packages(pkg)
+}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(gridExtra)
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.height = 4
+)
+```
+
+# Introduction
+In this lab, we explore the concepts of probability distributions and simulations using R. Through the use of built-in simulation functions and visualizations, we aim to:
+
+- Simulate real-world random experiments like coin tosses and dice rolls
+
+- Visualize and analyze theoretical vs. simulated distributions
+
+- Explore key probability distributions such as Normal, Binomial, and Poisson
+
+- Validate statistical laws such as the Law of Large Numbers (LLN) and Central Limit Theorem (CLT)
+
+# Exercise 1 - Simulating a Coin Flip
+We simulate flipping a fair coin 1000 times.
+```{r coin-flip}
+set.seed(123)
+coin_flips <- sample(c("Heads", "Tails"), size = 1000, replace = TRUE)
+
+# Convert to table and data frame
+flip_table <- table(coin_flips)
+flip_df <- as.data.frame(flip_table)
+
+# Bar plot
+ggplot(flip_df, aes(x = coin_flips, y = Freq, fill = coin_flips)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Simulated Coin Flips", x = "Outcome", y = "Frequency") +
+  theme_minimal()
+```
+
+Observation: The outcomes of Heads and Tails are nearly balanced, reflecting a fair coin simulation.
+
+# Exercise 2 - Simulating Dice Rolls
+Simulate rolling a fair six-sided die 1000 times and compare with uniform distribution.
+```{r dice-roll}
+set.seed(456)
+dice_rolls <- sample(1:6, size = 1000, replace = TRUE)
+
+# Frequency table
+dice_df <- as.data.frame(table(dice_rolls))
+
+# Bar plot
+ggplot(dice_df, aes(x = dice_rolls, y = Freq)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Simulated Dice Rolls", x = "Dice Face", y = "Frequency") +
+  theme_minimal()
+```
+
+Observation: Each face of the die appears with roughly equal frequency, consistent with a uniform distribution.
+
+# Exercise 3 - Simulating Normal Distribution
+Generate 1000 samples from N(0, 1) and visualize the histogram.
+```{r normal}
+set.seed(789)
+norm_data <- rnorm(1000, mean = 0, sd = 1)
+
+ggplot(data.frame(x = norm_data), aes(x = x)) +
+  geom_histogram(bins = 30, fill = "lightgreen", color = "black") +
+  labs(title = "Histogram of N(0, 1)", x = "Value", y = "Count") +
+  theme_minimal()
+```
+
+Observation: The histogram forms a symmetric bell shape centered around zero, resembling a standard normal distribution.
+
+# Exercise 4 - Simulating Binomial Distribution
+Simulate 1000 observations from Binomial(n=10, p=0.5).
+```{r biomial}
+set.seed(321)
+binom_data <- rbinom(1000, size = 10, prob = 0.5)
+
+ggplot(data.frame(x = binom_data), aes(x = x)) +
+  geom_bar(fill = "tomato") +
+  labs(title = "Binomial Distribution: n = 10, p = 0.5", x = "Number of Successes", y = "Frequency") +
+  theme_minimal()
+```
+
+Observation: The distribution is symmetric and peaks at 5, aligning with the expected number of successes.
+
+# Exercise 5 - Simulating Poisson Distribution
+Simulate 1000 samples from Poisson(λ=3).
+```{r possion}
+set.seed(654)
+pois_data <- rpois(1000, lambda = 3)
+
+ggplot(data.frame(x = pois_data), aes(x = x)) +
+  geom_bar(fill = "purple") +
+  labs(title = "Poisson Distribution: lambda = 3", x = "Events", y = "Frequency") +
+  theme_minimal()
+```
+
+Observation: The distribution is right-skewed with a peak around 2-3, characteristic of a Poisson process.
+
+# Exercise 6 - Law of Large Numbers (LLN) Visualization
+Demonstrate convergence of sample mean to true mean using repeated sampling.
+```{r LLN}
+set.seed(777)
+samples <- rnorm(1000, mean = 5, sd = 2)
+sample_means <- cumsum(samples) / (1:1000)
+
+ggplot(data.frame(index = 1:1000, mean = sample_means), aes(x = index, y = mean)) +
+  geom_line(color = "darkorange") +
+  geom_hline(yintercept = 5, linetype = "dashed", color = "red") +
+  labs(title = "Law of Large Numbers", x = "Sample Size", y = "Running Mean") +
+  theme_minimal()
+```
+
+Observation: The running sample mean stabilizes near the true mean, demonstrating convergence as sample size increases.
+
+# Conclusion
+This lab demonstrates how simulations in R can help visualize and understand key concepts in probability such as random events, distributions, and convergence.
+These simulations enhance our understanding of probability theory and lay the groundwork for further study in statistical inference and data modeling.

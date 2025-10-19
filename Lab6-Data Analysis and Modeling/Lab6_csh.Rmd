@@ -1,0 +1,144 @@
+---
+title: "Lab 7 - Introduction to Linear Regression"
+author: "202330420212 - Sihan Chen & 202364820921 - Yue Zhang"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: true
+    latex_engine: xelatex
+  html_document:
+    toc: false
+    number_sections: true
+    fig_caption: true
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(ggplot2)
+library(dplyr)
+library(car)
+
+# 下载数据集
+load(url("http://www.openintro.org/stat/data/mlb11.RData"))
+```
+
+# Introduction
+
+In this lab, we use data from the 2011 MLB season to explore linear regression. The data includes various team statistics such as hits, home runs, batting average, and number of wins. The target variable we aim to predict is the number of runs scored by each team.
+
+**Objectives of this lab include:**
+
+- Understand how to visualize and quantify the relationship between two variables
+- Fit and interpret simple linear regression models
+- Evaluate assumptions through residual analysis and model diagnostics
+- Compare competing models using summary statistics and information criteria (e.g., R²)
+- Identify the best traditional baseball metric for predicting runs
+
+# Exploratory Data Analysis & Initial Model
+
+## Exercise 1 - Plot and Correlation
+
+```{r}
+ggplot(mlb11, aes(x = at_bats, y = runs)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Runs vs. At-Bats", x = "At-Bats", y = "Runs")
+```
+
+```{r}
+cor(mlb11$runs, mlb11$at_bats)
+```
+
+**Answer:** The scatterplot is appropriate. The relationship appears roughly linear. The correlation coefficient quantifies the strength (r ≈ 0.61).
+
+## Exercise 2 - Model with `homeruns`
+
+```{r}
+# 注意变量名称是 'homeruns' 而非 'home_runs'
+m2 <- lm(runs ~ homeruns, data = mlb11)
+summary(m2)
+```
+
+**Answer:** The regression line is:
+\[ \hat{y} = 415.2389 + 1.8345 \times \text{homeruns} \]
+
+**Interpretation:** Each additional home run is associated with an estimated increase of about 1.83 runs, holding all else constant.
+
+# Model Diagnostics
+
+## Exercise 3 - Linearity via Residual Plot
+
+```{r}
+m1 <- lm(runs ~ at_bats, data = mlb11)
+plot(m1$residuals ~ mlb11$at_bats,
+     main = "Residual Plot", xlab = "At-Bats", ylab = "Residuals")
+abline(h = 0, lty = 3)
+```
+
+**Answer:** Residuals appear randomly scattered around 0, suggesting linearity is a reasonable assumption.
+
+## Exercise 4 - Which statement is false?
+
+**Answer:** Statement **B** is false. The residual plot does **not** show a strong curved pattern.
+
+## Exercise 5 - Histogram & QQ Plot for Normality
+
+```{r}
+hist(m1$residuals, main = "Histogram of Residuals")
+qqnorm(m1$residuals)
+qqline(m1$residuals)
+```
+
+**Answer:** The histogram is roughly bell-shaped. The QQ plot shows mild deviations from normality but is acceptable.
+
+## Exercise 6 - Constant Variability
+
+**Answer:** The residuals exhibit relatively constant spread across the range of fitted values. Thus, the assumption of homoscedasticity is met.
+
+# Additional Exercises
+
+## Exercise 7 - Use `bat_avg` to Predict `runs`
+
+```{r}
+model_ba <- lm(runs ~ bat_avg, data = mlb11)
+summary(model_ba)
+
+ggplot(mlb11, aes(x = bat_avg, y = runs)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Runs vs. Batting Average", x = "Batting Average", y = "Runs")
+```
+
+**Answer:** There is a strong positive linear relationship. Teams with higher batting averages tend to score more runs.
+
+## Exercise 8 - Compare R² Values
+
+```{r}
+summary(m1)$r.squared     # R² from at_bats
+summary(model_ba)$r.squared  # R² from bat_avg
+```
+
+**Answer:** R² for `at_bats` is around 0.37, while R² for `bat_avg` is approximately 0.66. Hence, `bat_avg` explains more variance in `runs`.
+
+## Exercise 9 - Which Traditional Variable Best Predicts Runs?
+
+```{r}
+vars <- c("hits", "at_bats", "wins", "bat_avg")
+rsq <- sapply(vars, function(v) summary(lm(runs ~ mlb11[[v]], data = mlb11))$r.squared)
+data.frame(variable = vars, r_squared = rsq)
+```
+
+**Answer:** Based on the R² values:
+
+- `bat_avg`: 0.6561
+- `hits`: 0.6419
+- `at_bats`: 0.3729
+- `wins`: 0.3610
+
+`bat_avg` is the best predictor of `runs`, followed closely by `hits`.
+
+# Conclusion
+
+We explored linear relationships between `runs` and several traditional baseball statistics. By fitting linear models, performing residual analysis, and comparing R² values, we identified `bat_avg` as the most effective single predictor of team scoring performance in the 2011 MLB season.

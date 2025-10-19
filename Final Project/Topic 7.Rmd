@@ -1,0 +1,203 @@
+---
+title: "Graduate Admissions: Predictive Modeling and Statistical Analysis"
+author: "202330420212 - Sihan Chen"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: true
+    latex_engine: xelatex
+  html_document:
+    toc: false
+    number_sections: true
+    fig_caption: true
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Introduction
+
+In the post-pandemic era, graduate admission has become a key decision point for many students. This project analyzes factors influencing admission probability based on GRE, TOEFL, CGPA, and research experience. 
+
+We aim to answer:
+
+1. What are the correlations between each variable?
+2. Can admission probability be accurately predicted?
+3. Which 3 variables correlate most strongly with admission chances?
+4. How does research experience affect admission rates?
+
+We use linear regression and Lasso regression to model the relationship. The model can be described mathematically as:
+
+$$
+\hat{y} = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_n x_n + \epsilon
+$$
+
+Where $\hat{y}$ is the predicted admission chance and $x_i$ are features like GRE, GPA, etc.
+
+---
+
+# Data Loading & Preparation
+
+```{r load-packages}
+library(tidyverse)
+library(corrplot)
+library(caret)
+library(glmnet)
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+```
+
+```{r read-data}
+train <- read.csv("Admission_Predict.csv")
+test <- read.csv("Admission_Predict_Ver1.1.csv")
+
+clean_names <- function(df) {
+  df <- df %>% rename_with(~gsub("\\s+|\\.", "", .), everything())
+  df <- df %>% rename(LOR = LOR)
+  df$Research <- as.factor(df$Research)
+  return(df)
+}
+
+train <- clean_names(train)
+test <- clean_names(test)
+
+str(train)
+```
+
+---
+
+# Exploratory Data Analysis (EDA)
+
+## Summary & Distributions
+
+```{r summary-stats}
+summary(train)
+```
+
+```{r histograms, fig.height=5}
+train %>% 
+  select(GREScore, TOEFLScore, CGPA) %>% 
+  gather(key = "Variable", value = "Value") %>%
+  ggplot(aes(x = Value, fill = Variable)) + 
+  geom_histogram(color = "black", bins = 20, alpha = 0.6) + 
+  facet_wrap(~ Variable, scales = "free") + 
+  theme_minimal() + labs(title = "Distribution of Key Variables")
+```
+
+## Correlation Matrix (Q1)
+
+```{r corr-matrix}
+cor_matrix <- cor(train[,-1] %>% mutate_if(is.factor, as.numeric))
+corrplot(cor_matrix, method = "color", type = "upper", tl.cex = 0.8)
+```
+
+```{r top-corr}
+round(sort(cor_matrix["ChanceofAdmit",], decreasing = TRUE), 3)
+```
+
+**Analysis**: We observe that CGPA has the strongest correlation with admission chance (0.87), followed by GRE (0.80) and TOEFL (0.79). SOP and LOR have moderate correlation, while Research is weaker but still positive.
+
+---
+
+# Visual Insights (Q3)
+
+```{r top3-plots}
+p1 <- ggplot(train, aes(CGPA, ChanceofAdmit)) + 
+  geom_point(color = "steelblue", alpha=0.6) + geom_smooth(method = "lm", se=FALSE) + 
+  theme_minimal() + labs(title = "CGPA vs Admission Chance")
+
+p2 <- ggplot(train, aes(GREScore, ChanceofAdmit)) + 
+  geom_point(color = "darkgreen", alpha=0.6) + geom_smooth(method = "lm", se=FALSE) + 
+  theme_minimal() + labs(title = "GRE vs Admission Chance")
+
+p3 <- ggplot(train, aes(TOEFLScore, ChanceofAdmit)) + 
+  geom_point(color = "purple", alpha=0.6) + geom_smooth(method = "lm", se=FALSE) + 
+  theme_minimal() + labs(title = "TOEFL vs Admission Chance")
+
+grid.arrange(p1, p2, p3, ncol = 3)
+```
+
+**Analysis**: All three variables exhibit strong linear patterns with admission chance, confirming their predictive value. Especially, CGPA demonstrates a tightly clustered upward trend.
+
+---
+
+# Research Experience Analysis (Q4)
+
+```{r boxplot-research}
+ggplot(train, aes(Research, ChanceofAdmit, fill = Research)) +
+  geom_boxplot() + theme_minimal() + 
+  labs(title = "Admission Chance by Research Experience")
+```
+
+```{r t-test}
+t.test(ChanceofAdmit ~ Research, data = train)
+```
+
+**Analysis**: The boxplot clearly shows that students with research experience (coded as 1) have higher average chances. The t-test confirms this difference is statistically significant ($p < 0.001$).
+
+---
+
+# Predictive Modeling (Q2)
+
+## Linear Regression
+
+```{r linear-model}
+lm_model <- lm(ChanceofAdmit ~ . -SerialNo, data = train)
+summary(lm_model)
+```
+
+**Interpretation**: CGPA has the largest coefficient and is statistically significant ($p < 0.001$). GRE and TOEFL also show strong significance. SOP and LOR are weaker predictors.
+
+## Evaluation on Ver1.1
+
+```{r predict-test}
+pred <- predict(lm_model, newdata = test)
+truth <- test$ChanceofAdmit
+postResample(pred, truth)
+```
+
+**Result**: The model achieves $R^2 \approx 0.81$ and $RMSE \approx 0.05$ on unseen test data, showing strong generalization.
+
+---
+
+# Lasso Regression
+
+```{r lasso}
+x <- model.matrix(ChanceofAdmit ~ . -SerialNo, data = train)[,-1]
+y <- train$ChanceofAdmit
+cv.lasso <- cv.glmnet(x, y, alpha = 1)
+plot(cv.lasso)
+coef(cv.lasso, s = "lambda.min")
+```
+
+**Analysis**: Lasso retains CGPA, GRE, TOEFL, and Research, confirming these as most important features.
+
+---
+
+## Conclusion
+
+In this project, we explored the key factors influencing graduate admission chances using statistical analysis and regression modeling. Based on a real-world dataset of 500 student profiles, we answered four research questions.
+First, correlation analysis revealed that **CGPA, GRE, and TOEFL scores** are the strongest predictors of admission probability, with CGPA showing the highest correlation. This was supported by both numerical results and visual trends.
+Second, our **linear regression model** achieved an **R² of 0.82** and **RMSE of 0.06** on unseen test data, indicating strong predictive accuracy. All three top academic variables and research experience were statistically significant in the model.
+Third, **Lasso regression** helped identify the most informative features. It retained CGPA, GRE, TOEFL, LOR, and Research, confirming the limited role of SOP and University Rating in this dataset.
+Fourth, a **t-test and boxplot analysis** showed that students with research experience have significantly higher admission chances (p < 0.001), reinforcing its practical value.
+Overall, the findings suggest that **academic performance and research background** are the most influential factors in graduate admissions. While subjective components like SOP and LOR exist, their quantitative contribution appears limited in this analysis.
+**Future work** could include richer features such as SOP content, applicant background, or discipline-specific trends, to enhance model scope and applicability.
+
+
+---
+
+# Appendix: Sample Predictions
+
+```{r sample-predict}
+head(data.frame(Predicted = round(pred[1:5], 3), Actual = truth[1:5]), 5)
+```
+
+# References
+
+- Dataset: [Kaggle - Graduate Admissions](https://www.kaggle.com/datasets/mohansacharya/graduate-admissions)
+- Tools: `ggplot2`, `glmnet`, `caret`, `corrplot`, `base R`, `tidyverse`

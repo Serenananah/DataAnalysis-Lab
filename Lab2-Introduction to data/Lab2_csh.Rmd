@@ -1,0 +1,156 @@
+---
+title: "Lab 2 - Introduction to Data"
+author: "202330420212-Sihan Chen & 202364820921-Yue Zhang"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: readable
+  pdf_document:
+    latex_engine: xelatex
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+packages <- c("babynames", "dplyr", "ggplot2")
+installed <- rownames(installed.packages())
+for (pkg in packages) {
+  if (!pkg %in% installed) install.packages(pkg)
+}
+library(babynames)
+library(dplyr)
+library(ggplot2)
+```
+
+# Introduction
+In this lab, we explore real-world baby naming data using the babynames dataset in R. This dataset contains information on baby names registered in the United States from 1880 onward, including the baby’s name, gender, year of birth, and the number of babies given that name.
+
+Our objectives are:
+
+- To load and explore the dataset  
+- To analyze the popularity trends of a chosen name over time  
+- To identify top baby names by frequency  
+- To create rich visualizations comparing trends and gender-based preferences
+
+# Exercise 1 - Load and view dataset
+We start by installing and loading the necessary packages: babynames, dplyr, and ggplot2
+```{r load-libs}
+library(babynames)
+library(dplyr)
+library(ggplot2)
+```
+Now we take a quick look at the dataset:
+```{r view-data}
+head(babynames)
+str(babynames)
+summary(babynames)
+
+range(babynames$year)
+length(unique(babynames$name))
+```
+
+
+
+# Exercise 2 - Select a name
+Let us choose the name “Emma” for our analysis. We will examine how its popularity has changed over the years.
+```{r filter-name}
+emma <- babynames %>%
+  filter(name == "Emma")
+
+head(emma)
+```
+
+
+
+
+# Exercise 3 - Plot trend of the name
+We now plot the number of babies named “Emma” over time, separated by gender.
+```{r plot-emma}
+ggplot(emma, aes(x = year, y = n, color = sex)) +
+  geom_line(size = 1.2) +
+  labs(
+    title = "Number of babies named 'Emma' over time",
+    x = "Year",
+    y = "Number of births"
+  ) +
+  theme_minimal()
+```
+Observation: The name Emma saw a dramatic rise in popularity in the early 2000s, especially among girls.
+
+
+# Exercise 4 - Top 5 Names in Recent Years
+We now determine the most popular names in the last decade (2010 to 2020), based on total number of babies given each name.
+```{r top-names}
+top_names_2010s <- babynames %>%
+  filter(year >= 2010 & year <= 2020) %>%
+  group_by(name) %>%
+  summarise(total_babies = sum(n)) %>%
+  arrange(desc(total_babies)) %>%
+  slice_head(n = 5)
+
+top_names_2010s
+```
+
+To visualize the Top 5 Names in the 2010s:
+```{r plot-top-names, fig.width=7, fig.height=5}
+ggplot(top_names_2010s, aes(x = reorder(name, -total_babies), y = total_babies)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(
+    title = "Top 5 Most Popular Names (2010-2020)",
+    x = "Name",
+    y = "Total Number of Babies"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
+  )
+```
+
+# Exercise 5 - Gender comparison for a specific year
+We now look at the top 5 male and top 5 female names in 2017.
+```{r conpute-top2017}
+top2017 <- babynames %>%
+  filter(year == 2017) %>%
+  group_by(sex, name) %>%
+  summarise(total = sum(n), .groups = "drop") %>%
+  arrange(sex, desc(total)) %>%
+  group_by(sex) %>%
+  slice_head(n = 5) %>%
+  ungroup()
+top2017  # check the data
+```
+
+To visualize Gender-Based Popular Names in 2017:
+```{r gender-plot, fig.width=7, fig.height=5}
+ggplot(top2017, aes(x = reorder(name, total), y = total, fill = sex)) +
+  geom_col(show.legend = TRUE, width = 0.6) +
+  facet_wrap(~ sex, scales = "free_y") +
+  coord_flip() +
+  labs(
+    title = "Top 5 Baby Names by Gender in 2017",
+    x = "Name",
+    y = "Number of Babies",
+    fill = "Gender"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    strip.text = element_text(face = "bold")
+  )
+```
+Observation: In 2017, the top baby names for both genders reveal distinct naming preferences. 
+For girls, Emma, Olivia, and Ava led the list, reflecting a continued popularity of short, soft-sounding names with vowel endings. 
+For boys, names like Liam, Noah, and William dominated, which are traditional and timeless choices. 
+The difference in trends suggests that while female names tend to evolve with contemporary preferences, male names often maintain a more classic and stable pattern.
+
+# Conclusion
+In this lab, we successfully:
+
+- Explored a real-world dataset using `babynames`, Applied data wrangling techniques with `dplyr`, Used `ggplot2` for high-quality data visualizations  
+- Investigated long-term trends for a given name  
+- Identified top baby names by total count  
+- Compared gender-based naming trends for a given year
+
+This foundational analysis sets the stage for more complex exploratory and predictive modeling in future labs.

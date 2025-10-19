@@ -1,0 +1,244 @@
+---
+title: "Lab 5 - Confidence Intervals"
+author: "202330420212 - Sihan Chen & 202364820921 - Yue Zhang"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: false
+    number_sections: true
+    fig_caption: true
+    theme: readable
+  pdf_document:
+    number_sections: true
+    fig_caption: true
+    latex_engine: xelatex  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(ggplot2)
+library(dplyr)
+library(tibble)
+data(sleep)
+pop_data <- sleep$extra
+```
+
+```{r ci-plot-function, echo=FALSE}
+plot_ci_band <- function(ci_df, true_mean) {
+  ci_df$sim <- 1:nrow(ci_df)
+  ggplot(ci_df, aes(x = sim)) +
+    geom_errorbar(aes(ymin = lower, ymax = upper, color = contains_mean), width = 0.25) +
+    geom_hline(yintercept = true_mean, color = "black", linetype = "dashed") +
+    scale_color_manual(values = c("red", "blue"),
+                       labels = c("Does NOT contain", "Contains")) +
+    labs(title = "Simulated 95% Confidence Intervals",
+         y = "Confidence Interval", x = "Simulation",
+         color = "True Mean") +
+    theme_minimal()
+}
+```
+
+# Introduction
+
+In this lab, we explore the concept of **confidence intervals (CIs)**, a key tool in statistical inference. By simulating sample data and building CIs, we learn how to estimate population parameters and understand the variability of our estimates.
+
+**Objectives of this lab include:**
+
+- Understand the sampling distribution of the mean
+
+- Construct confidence intervals from sample statistics
+
+- Interpret the meaning of confidence intervals
+
+- Explore the coverage probability of 95% confidence intervals
+
+- Develop visual intuition through CI plots
+
+- Address common misconceptions in CI interpretation
+
+# Sampling Distributions
+
+This section investigates how sample means behave across repeated sampling. By simulating sampling distributions, we observe how sample size and sampling variability impact the estimation of the population mean.
+
+## Exercise 1 - Sampling Distribution Simulation
+
+```{r}
+set.seed(123)
+sample_means <- replicate(1000, {
+  samp <- sample(pop_data, size = 10, replace = TRUE)
+  mean(samp)
+})
+
+hist(sample_means, breaks = 30, main = "Sampling Distribution of the Sample Mean", 
+    xlab = "Sample Mean", col = "lightblue", border = "white")
+```
+
+**Observation:** The sampling distribution of the sample mean is approximately normal and centered around the population mean.
+
+## Exercise 2 - Mean and Standard Error
+
+```{r}
+mean(sample_means)
+sd(sample_means)  # This is the standard error
+```
+
+**Observation:** The average of the sample means approximates the population mean, and the standard deviation represents the standard error.
+
+## Exercise 3 - Compare Sample Sizes
+
+```{r}
+set.seed(456)
+sample_means_10 <- replicate(1000, mean(sample(pop_data, size = 10, replace = TRUE)))
+sample_means_30 <- replicate(1000, mean(sample(pop_data, size = 30, replace = TRUE)))
+
+par(mfrow = c(1, 2))
+hist(sample_means_10, main = "n = 10", xlab = "Sample Mean", col = "skyblue")
+hist(sample_means_30, main = "n = 30", xlab = "Sample Mean", col = "salmon")
+par(mfrow = c(1, 1))
+```
+
+**Observation:** Larger sample sizes produce sampling distributions with smaller spread (lower standard error).
+
+# Confidence Intervals
+
+Here we explore how confidence intervals are constructed using sample statistics. We simulate the coverage behavior of 95% confidence intervals, visualize them, and examine conditions under which they may fail to capture the true mean.
+
+## Exercise 4 - 95% Confidence Interval Simulation
+
+```{r}
+set.seed(789)
+num_sim <- 250
+true_mean <- mean(pop_data)
+
+ci_data <- replicate(num_sim, {
+  samp <- sample(pop_data, size = 10, replace = TRUE)
+  xbar <- mean(samp)
+  se <- sd(samp)/sqrt(10)
+  lower <- xbar - 1.96 * se
+  upper <- xbar + 1.96 * se
+  c(lower, upper)
+})
+
+ci_df <- as_tibble(t(ci_data)) %>% rename(lower = V1, upper = V2)
+ci_df$contains_mean <- (ci_df$lower <= true_mean) & (ci_df$upper >= true_mean)
+mean(ci_df$contains_mean)
+```
+
+**Observation:** The proportion of intervals that contain the true mean should be close to 0.95.
+
+## Exercise 5 - CI Visualization
+
+```{r}
+plot_ci_band(ci_df, true_mean)
+```
+
+**Observation:** Most intervals contain the true mean (dashed black line); the few that don’t are highlighted in red.
+
+## Exercise 6 - When CIs Fail
+
+```{r}
+biased_data <- c(rep(5, 10), rnorm(20, mean = 0))
+mean(biased_data)
+t.test(biased_data)$conf.int
+```
+
+**Observation:** A biased sample can lead to a confidence interval that fails to include the true population mean.
+
+# Interpreting Confidence Intervals
+
+This section addresses common misconceptions and interpretation pitfalls regarding confidence intervals. Through true/false questions, we clarify what a CI does and does not represent.
+
+## Exercise 7 - CI Interpretation Questions
+
+**Q1:** A 95% confidence interval means there is a 95% chance the true parameter is inside the interval.  
+**Answer:** False. The CI is fixed after sampling; either the true mean is in it or not.
+
+**Q2:** If we repeat the process many times, 95% of such intervals will contain the population mean.  
+**Answer:** True.
+
+**Q3:** A wide CI implies less certainty in our estimate.  
+**Answer:** True.
+
+**Q4:** A CI always contains 95% of the sample data.  
+**Answer:** False.
+
+**Q5:** Narrower CIs mean more precise estimates.  
+**Answer:** True.
+
+# More Practice with Confidence Intervals
+
+We apply confidence intervals in practical contexts—estimating subpopulation means, exploring the effect of sample size on CI width, and constructing bootstrap confidence intervals without parametric assumptions.
+
+## Exercise 8 - Applying CIs to Subgroups
+
+```{r}
+data(iris)
+iris_setosa <- filter(iris, Species == "setosa")
+
+mean_setosa <- mean(iris_setosa$Sepal.Length)
+se_setosa <- sd(iris_setosa$Sepal.Length) / sqrt(nrow(iris_setosa))
+ci_lower <- mean_setosa - 1.96 * se_setosa
+ci_upper <- mean_setosa + 1.96 * se_setosa
+c(ci_lower, ci_upper)
+```
+
+```{r, fig.width=6, fig.height=4}
+ggplot(iris_setosa, aes(x = Sepal.Length)) +
+  geom_histogram(fill = "lightblue", binwidth = 0.1, color = "white") +
+  geom_vline(xintercept = c(ci_lower, ci_upper), color = "red", linetype = "dashed") +
+  labs(title = "Sepal Length (Setosa) with 95% CI", x = "Sepal Length", y = "Count") +
+  theme_minimal()
+
+```
+
+**Observation:** The CI estimates the population mean Sepal.Length for setosa with 95% confidence.
+
+## Exercise 9 - Exploring CI Width with Varying Sample Sizes
+
+```{r}
+sizes <- c(10, 20, 50, 100, 200)
+ci_widths <- sapply(sizes, function(n) {
+  samp <- sample(pop_data, n, replace = TRUE)  # 加上 replace = TRUE
+  xbar <- mean(samp)
+  se <- sd(samp) / sqrt(n)
+  2 * 1.96 * se  # total width
+})
+data.frame(SampleSize = sizes, CI_Width = ci_widths)
+
+plot_df <- data.frame(SampleSize = sizes, CI_Width = ci_widths)
+```
+
+```{r, fig.width=6, fig.height=4}
+ggplot(plot_df, aes(x = SampleSize, y = CI_Width)) +
+  geom_line(size = 1.2, color = "steelblue") +
+  geom_point(size = 2) +
+  labs(title = "CI Width vs. Sample Size", x = "Sample Size", y = "CI Width") +
+  theme_minimal()
+
+```
+
+**Observation:** CI width decreases with increasing sample size, reflecting higher precision.
+
+## Exercise 10 - Bootstrapped CI
+
+```{r}
+set.seed(222)
+sample_data <- sample(pop_data, 20)
+boot_means <- replicate(1000, mean(sample(sample_data, 20, replace = TRUE)))
+quantile(boot_means, c(0.025, 0.975))
+```
+
+```{r, fig.width=6, fig.height=4}
+ggplot(data.frame(x = boot_means), aes(x = x)) +
+  geom_histogram(bins = 30, fill = "orchid", color = "white") +
+  geom_vline(xintercept = quantile(boot_means, c(0.025, 0.975)), linetype = "dashed", color = "red") +
+  labs(title = "Bootstrap Distribution of the Mean", x = "Mean", y = "Frequency") +
+  theme_minimal()
+
+```
+
+**Observation:** Bootstrapping provides an empirical confidence interval without assuming normality.
+
+# Conclusion
+
+In this lab, we investigated the principles and behavior of confidence intervals through simulation and theoretical inference. We observed how sample means vary, how confidence intervals are constructed, and how their accuracy depends on randomness, bias, and sample size. Visual tools like CI plots enhanced our understanding of coverage, and interpretation exercises reinforced correct conceptual use of CIs. This foundational understanding will support future statistical modeling and hypothesis testing.
